@@ -6,6 +6,25 @@ import csv
 from io import TextIOWrapper
 def index(request):
     return render(request, 'csvapp/index.html')
+
+def delete_ground_truth(request):
+    if request.method == 'POST':
+        GroundTruth.objects.all().delete()
+        return redirect('index')
+    return render(request, 'csvapp/confirm_delete.html', {'table': 'GroundTruth'})
+
+def delete_prediction(request):
+    if request.method == 'POST':
+        Prediction.objects.all().delete()
+        return redirect('index')
+    return render(request, 'csvapp/confirm_delete.html', {'table': 'Prediction'})
+
+def delete_both(request):
+    if request.method == 'POST':
+        GroundTruth.objects.all().delete()
+        Prediction.objects.all().delete()
+        return redirect('index')
+    return render(request, 'csvapp/confirm_delete.html', {'table': 'Both'})
 def upload_csv(request):
     if request.method == 'POST':
         form = CSVUploadForm(request.POST, request.FILES)
