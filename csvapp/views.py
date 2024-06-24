@@ -4,7 +4,8 @@ from .models import GroundTruth, Prediction
 from .forms import CSVUploadForm, PredictionForm
 import csv
 from io import TextIOWrapper
-
+def index(request):
+    return render(request, 'csvapp/index.html')
 def upload_csv(request):
     if request.method == 'POST':
         form = CSVUploadForm(request.POST, request.FILES)

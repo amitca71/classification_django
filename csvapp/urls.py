@@ -1,7 +1,8 @@
 from django.urls import path
-from .views import upload_csv, ground_truth_list, prediction_list, prediction_update
+from .views import upload_csv, ground_truth_list, prediction_list, prediction_update, index
 
 urlpatterns = [
+    path('', index, name='index'),  # Default route
     path('upload_csv/', upload_csv, name='upload_csv'),
     path('ground_truth/', ground_truth_list, name='ground_truth_list'),
     path('predictions/', prediction_list, name='prediction_list'),
