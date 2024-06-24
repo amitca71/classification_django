@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Prediction List</title>
+</head>
+<body>
+    <h1>Prediction List</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Input</th>
+                <th>Predicted</th>
+                <th>Fixed Prediction</th>
+                <th>Probability</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for prediction in predictions %}
+            <tr>
+                <td>{{ prediction.input }}</td>
+                <td>{{ prediction.predicted }}</td>
+                <td>{{ prediction.fixed_prediction }}</td>
+                <td>{{ prediction.probability }}</td>
+                <td>
+                    <a href="{% url 'prediction_update' prediction.pk %}">Edit</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
+

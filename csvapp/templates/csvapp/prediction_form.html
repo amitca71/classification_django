@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Update Prediction</title>
+</head>
+<body>
+    <h1>Update Prediction</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Save</button>
+    </form>
+    <a href="{% url 'prediction_list' %}">Back to Predictions</a>
+</body>
+</html>
+
