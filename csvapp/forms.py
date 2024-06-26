@@ -12,4 +12,3 @@ class PredictionForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['fixed_prediction'].queryset = GroundTruth.objects.values_list('classification', flat=True).distinct()
-

@@ -74,14 +74,28 @@ WSGI_APPLICATION = 'classification_django.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+#DATABASES = {
+#    'default': {
+#        'ENGINE': 'django.db.backends.sqlite3',
+#        'NAME': BASE_DIR / 'db.sqlite3',
+#    }
+#}
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'vectordb',      # Replace with your database name
+        'USER': 'testuser',          # Replace with your database username
+        'PASSWORD': 'testpwd',    # Replace with your database password
+        'HOST': 'localhost',       # Assuming PostgreSQL is running locally
+        'PORT': '5432',                # Default port
     }
 }
-
-
+DATABASES['default']['OPTIONS'] = {
+    'options': '-c search_path=public',
+    'application_name': 'csvapp',
+}
+import pgvector.psycopg 
+PGVECTOR_SCHEMA = 'public'
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 

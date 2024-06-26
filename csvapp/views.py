@@ -1,9 +1,10 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator
-from .models import GroundTruth, Prediction
+from .models import GroundTruth, Prediction, GroundTruthClass, GroundTruthInput
 from .forms import CSVUploadForm, PredictionForm
 import csv
-from io import TextIOWrapper
+from io import TextIOWrapper, StringIO
+import pandas as pd
 def index(request):
     return render(request, 'csvapp/index.html')
 
@@ -19,12 +20,15 @@ def delete_prediction(request):
         return redirect('index')
     return render(request, 'csvapp/confirm_delete.html', {'table': 'Prediction'})
 
-def delete_both(request):
+def delete_all(request):
     if request.method == 'POST':
         GroundTruth.objects.all().delete()
+        GroundTruthClass.objects.all().delete()
+        GroundTruthInput.objects.all().delete()
         Prediction.objects.all().delete()
+
         return redirect('index')
-    return render(request, 'csvapp/confirm_delete.html', {'table': 'Both'})
+    return render(request, 'csvapp/confirm_delete.html', {'table': 'All'})
 def upload_csv(request):
     if request.method == 'POST':
         form = CSVUploadForm(request.POST, request.FILES)
@@ -34,20 +38,22 @@ def upload_csv(request):
                 form.add_error('csv_file', 'This field is required.')
             else:
                 try:
-                    file = request.FILES['csv_file']
-                    decoded_file = file.read().decode('utf-8').splitlines()
-                    reader = csv.reader(decoded_file)
-                    next(reader)  # Skip the header row
-                    for row in reader:
-                        GroundTruth.objects.create(input=row[0], classification=row[1], category=row[2])
-#                    csv_file = TextIOWrapper(request.FILES['csv_file'].file, encoding='utf-8')
-#                    reader = csv.DictReader(csv_file)
+                    # Read the CSV file into a Pandas DataFrame
+                    df = pd.read_csv(request.FILES['csv_file']).drop_duplicates().dropna()
+                    df_class=df[['classification']].drop_duplicates()
+                    instances = [GroundTruthClass(classification=row['classification']) for index, row in df_class.iterrows()]
+                    GroundTruthClass.objects.bulk_create(instances)
+                    instances = [GroundTruthInput(input=row['input']) for index, row in df.iterrows()]
+                    GroundTruthInput.objects.bulk_create(instances)      
+                    # Example: Process the DataFrame (print first few rows)
+                    instances = [GroundTruth(input_id=row['input'], classification_id=row['classification']) for index, row in df.iterrows()]                   
+                    GroundTruth.objects.bulk_create(instances)
+#                    file = request.FILES['csv_file']
+#                    decoded_file = file.read().decode('utf-8').splitlines()
+#                   reader = csv.reader(decoded_file)   
+#                    next(reader)  # Skip the header row
 #                    for row in reader:
-#                        GroundTruth.objects.create(
-#                            input=row[0],
-#                            classification=row['classification'],
-#                            category=row['category']
-#                        )
+#                        GroundTruth.objects.create(input=row[0], classification=row[1])
                 except UnicodeDecodeError:
                     csv_file = TextIOWrapper(request.FILES['csv_file'].file, encoding='latin1')
                     reader = csv.DictReader(csv_file)
