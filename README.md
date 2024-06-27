@@ -1,10 +1,12 @@
 # classification_django
 python -m venv .
-./bin/activate
+chmod 755 ./bin/activate
+. ./bin/activate
 pip install -r requirements.txt
 
 django-admin startapp csvapp
 python manage.py makemigrations
 python manage.py migrate
+python manage.py loaddata embedding_models
 python manage.py runserver
 
