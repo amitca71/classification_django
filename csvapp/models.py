@@ -34,11 +34,20 @@ class EmbeddingModels(models.Model):
         db_table = 'embedding_models' 
 
 class ClassEmbeddings(models.Model):
-    classification = models.ForeignKey(GroundTruthClass, on_delete=models.CASCADE,unique=True)
+    classification = models.ForeignKey(GroundTruthClass, on_delete=models.CASCADE)
     model = models.ForeignKey(EmbeddingModels, on_delete=models.CASCADE)
     embedding_vector = VectorField(dimensions=384)
     class Meta:
         db_table = 'class_embedding'     
+        unique_together = ('classification', 'model')
+
+class InputEmbeddings(models.Model):
+    input = models.ForeignKey(GroundTruthInput, on_delete=models.CASCADE)
+    model = models.ForeignKey(EmbeddingModels, on_delete=models.CASCADE)
+    embedding_vector = VectorField(dimensions=384)
+    class Meta:
+        db_table = 'input_embedding'     
+        unique_together = ('input', 'model')
 class Prediction(models.Model):
     input = models.CharField(max_length=200)
     predicted = models.CharField(max_length=100)

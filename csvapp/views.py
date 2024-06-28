@@ -1,6 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.apps import apps
+
 from django.core.paginator import Paginator
-from .models import GroundTruth, Prediction, GroundTruthClass, GroundTruthInput, EmbeddingModels, ClassEmbeddings
+from .models import GroundTruth, Prediction, GroundTruthClass, GroundTruthInput, EmbeddingModels, ClassEmbeddings, InputEmbeddings
 from .forms import CSVUploadForm, PredictionForm, EmbeddingModelForm, ModelSelectionForm
 from sentence_transformers import SentenceTransformer, models
 
@@ -25,12 +27,13 @@ def delete_prediction(request):
 
 def delete_all(request):
     if request.method == 'POST':
-        GroundTruth.objects.all().delete()
-        GroundTruthClass.objects.all().delete()
-        GroundTruthInput.objects.all().delete()
+#        GroundTruth.objects.all().delete()
+#        GroundTruthClass.objects.all().delete()
+#        GroundTruthInput.objects.all().delete()
         Prediction.objects.all().delete()
 #        EmbeddingModels.objects.all().delete()
         ClassEmbeddings.objects.all().delete()
+        InputEmbeddings.objects.all().delete()
         return redirect('index')
     return render(request, 'csvapp/confirm_delete.html', {'table': 'All'})
 def upload_csv(request):
@@ -104,34 +107,50 @@ def add_model(request):
 def list_embedding_models(request):
     embedding_models = EmbeddingModels.objects.all()
     return render(request, 'csvapp/list_embedding_models.html', {'embedding_models': embedding_models})
+
+
+def create_dynamic_instance(model_name, field_values):
+    try:
+        # Retrieve the model dynamically
+        model_class = apps.get_model(app_label='csvapp', model_name=model_name.__name__)
+
+        # Create an instance of the model dynamically
+#        instance = model_class.objects.create(**field_values)
+        instance = model_class(**field_values)
+        return instance  # Optionally return the created instance
+
+    except AttributeError:
+        print(f"Model '{model_name}' does not exist.")
+
+########################################################
+def create_embeddings(source_entity, destination_entity,source_column_name, selected_model,embedding_model):
+    embedding_results = []
+    in_records_lst = source_entity.objects.all()
+    for record in in_records_lst:
+        embedding_vector = embedding_model.encode([getattr(record, source_column_name)])[0].tolist()
+        field_values = {
+            source_column_name: record,
+            'model': selected_model,
+            'embedding_vector': embedding_vector,
+        }    
+        embedded_record=create_dynamic_instance(destination_entity, field_values)
+        print(embedded_record)
+#        embedded_record=destination_entity(classification=record,model=selected_model, embedding_vector=embedding_vector)
+        embedding_results.append(embedded_record)
+    destination_entity.objects.bulk_create(embedding_results)
+    return(embedding_results)
+
+################################################
 def embedding_task(request):
     if request.method == 'POST':
         form = ModelSelectionForm(request.POST)
         if form.is_valid():
             selected_model = form.cleaned_data['model']
-            
-            # Retrieve all ground truth classifications
-            classifications = GroundTruthClass.objects.all()
-            
-            # Perform embedding using SentenceTransformer
             model_name = selected_model.name
             embedding_model = SentenceTransformer(model_name)
-            
-            embedding_results = []
-            for classification in classifications:
-                text_to_embed = classification.classification
-                embedding_vector = embedding_model.encode([text_to_embed])[0].tolist()
-                
-                # Save the embedding result to EmbeddingResult table
-                embedding_result = ClassEmbeddings.objects.create(
-                    classification=classification,
-                    model=selected_model,
-                    embedding_vector=embedding_vector
-                )
-                embedding_results.append(embedding_result)
-            
+            embedding_results=create_embeddings(GroundTruthInput, InputEmbeddings,'input', selected_model, embedding_model )
+            embedding_results=create_embeddings(GroundTruthClass, ClassEmbeddings,'classification', selected_model, embedding_model )
             return render(request, 'csvapp/embedding_results.html', {'results': embedding_results})
     else:
         form = ModelSelectionForm()
-    
     return render(request, 'csvapp/select_model.html', {'form': form})
