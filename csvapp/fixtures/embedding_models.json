@@ -1,0 +1,4 @@
+[
+    {"pk": 1, "model": "csvapp.EmbeddingModels", "fields": {"name": "all-MiniLM-L12-v2", "size":"384", "technology":"SentenceTransformer"}},
+    {"pk": 2, "model": "csvapp.EmbeddingModels", "fields": {"name": "multi-qa-MiniLM-L-cos-v1", "size":"384", "technology":"SentenceTransformer"}}
+]
