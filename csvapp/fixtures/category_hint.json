@@ -1,0 +1,15 @@
+[
+    {"pk": 1, "model": "csvapp.CategoryHint", "fields": {"ts_word": "עמוד", "category":"Columns"}},
+    {"pk": 2, "model": "csvapp.CategoryHint", "fields": {"ts_word": "קורה", "category":"Beams"}},
+    {"pk": 3, "model": "csvapp.CategoryHint", "fields": {"ts_word": "רצפה", "category":"Floors"}},
+    {"pk": 4, "model": "csvapp.CategoryHint", "fields": {"ts_word": "תקרה", "category":"Floors"}},
+    {"pk": 5, "model": "csvapp.CategoryHint", "fields": {"ts_word": "רמפה", "category":"Floors"}},
+    {"pk": 6, "model": "csvapp.CategoryHint", "fields": {"ts_word": "קיר", "category":"Walls"}},
+    {"pk": 7, "model": "csvapp.CategoryHint", "fields": {"ts_word": "קירה", "category":"Walls"}},
+    {"pk": 8, "model": "csvapp.CategoryHint", "fields": {"ts_word": "יסוד", "category":"Foundations"}},
+    {"pk": 9, "model": "csvapp.CategoryHint", "fields": {"ts_word": "יסודה", "category":"Foundations"}},
+    {"pk": 10, "model": "csvapp.CategoryHint", "fields": {"ts_word": "רפסודה", "category":"Foundations"}},
+    {"pk": 11, "model": "csvapp.CategoryHint", "fields": {"ts_word": "כלו", "category":"Foundations"}},
+    {"pk": 12, "model": "csvapp.CategoryHint", "fields": {"ts_word": "כלונסאה", "category":"Foundations"}}
+ ]
+ 
