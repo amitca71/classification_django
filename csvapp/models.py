@@ -58,5 +58,12 @@ class Prediction(models.Model):
         db_table = 'prediction' 
     def __str__(self):
         return self.input
+class CategoryHint(models.Model):
+    ts_word = models.CharField(max_length=30, primary_key=True)
+    category = models.CharField(max_length=30)
+    class Meta:
+        db_table = 'category_hint' 
+    def __str__(self):
+        return self.input
 
 # Create your models here.

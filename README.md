@@ -8,5 +8,9 @@ django-admin startapp csvapp
 python manage.py makemigrations
 python manage.py migrate
 python manage.py loaddata embedding_models
+python manage.py loaddata category_hint 
 python manage.py runserver
+
+python manage.py showmigrations
+python manage.py makemigrations --merge
 
