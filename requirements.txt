@@ -1,0 +1,6 @@
+numpy==1.26.4 
+Django
+pgvector
+psycopg
+pandas
+sentence_transformers
