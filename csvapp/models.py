@@ -2,19 +2,19 @@ from django.db import models
 from pgvector.django import VectorField
 
 class GroundTruthClass(models.Model):
-    classification = models.CharField(max_length=300, primary_key=True)
+    content = models.CharField(max_length=300, primary_key=True)
 #    embedding = models.JSONField()
     class Meta:
         db_table = 'ground_truth_classes' 
     def __str__(self):
-        return self.classification
+        return self.content
 class GroundTruthInput(models.Model):
-    input = models.CharField(max_length=300, primary_key=True) 
-#    embedding = models.JSONField()
+    content = models.CharField(max_length=300, primary_key=True) 
+#    c = models.JSONField()
     class Meta:
         db_table = 'ground_truth_input' 
     def __str__(self):
-        return self.input
+        return self.content
 
 class GroundTruth(models.Model):
     input = models.ForeignKey(GroundTruthInput, on_delete=models.CASCADE)
@@ -34,36 +34,36 @@ class EmbeddingModels(models.Model):
         db_table = 'embedding_models' 
 
 class ClassEmbeddings(models.Model):
-    classification = models.ForeignKey(GroundTruthClass, on_delete=models.CASCADE)
+    content = models.ForeignKey(GroundTruthClass, on_delete=models.CASCADE)
     model = models.ForeignKey(EmbeddingModels, on_delete=models.CASCADE)
-    embedding_vector = VectorField(dimensions=384)
+    embedding = VectorField(dimensions=384)
     class Meta:
         db_table = 'class_embedding'     
-        unique_together = ('classification', 'model')
+        unique_together = ('content', 'model')
 
 class InputEmbeddings(models.Model):
-    input = models.ForeignKey(GroundTruthInput, on_delete=models.CASCADE)
+    content = models.ForeignKey(GroundTruthInput, on_delete=models.CASCADE)
     model = models.ForeignKey(EmbeddingModels, on_delete=models.CASCADE)
-    embedding_vector = VectorField(dimensions=384)
+    embedding = VectorField(dimensions=384)
     class Meta:
         db_table = 'input_embedding'     
-        unique_together = ('input', 'model')
-class Prediction(models.Model):
-    input = models.CharField(max_length=200)
-    predicted = models.CharField(max_length=100)
-    fixed_prediction = models.CharField(max_length=100, blank=True)
-    probability = models.FloatField()
-    embedding = models.JSONField()
-    class Meta:
-        db_table = 'prediction' 
-    def __str__(self):
-        return self.input
+        unique_together = ('content', 'model')
+#class Prediction(models.Model):
+#    input = models.CharField(max_length=200)
+#    predicted = models.CharField(max_length=100)
+#    fixed_prediction = models.CharField(max_length=100, blank=True)
+#    probability = models.FloatField()
+#    embedding = models.JSONField()
+#    class Meta:
+#        db_table = 'prediction' 
+#    def __str__(self):
+#        return self.input
 class CategoryHint(models.Model):
     ts_word = models.CharField(max_length=30, primary_key=True)
     category = models.CharField(max_length=30)
     class Meta:
         db_table = 'category_hint' 
     def __str__(self):
-        return self.input
+        return self.ts_word
 
 # Create your models here.

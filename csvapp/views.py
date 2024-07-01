@@ -2,8 +2,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.apps import apps
 
 from django.core.paginator import Paginator
-from .models import GroundTruth, Prediction, GroundTruthClass, GroundTruthInput, EmbeddingModels, ClassEmbeddings, InputEmbeddings
-from .forms import CSVUploadForm, PredictionForm, EmbeddingModelForm, ModelSelectionForm
+from .models import GroundTruth, GroundTruthClass, GroundTruthInput, EmbeddingModels, ClassEmbeddings, InputEmbeddings
+from .forms import CSVUploadForm, EmbeddingModelForm, ModelSelectionForm
 from sentence_transformers import SentenceTransformer, models
 
 
@@ -19,19 +19,19 @@ def delete_ground_truth(request):
         return redirect('index')
     return render(request, 'csvapp/confirm_delete.html', {'table': 'GroundTruth'})
 
-def delete_prediction(request):
-    if request.method == 'POST':
-        Prediction.objects.all().delete()
-        return redirect('index')
-    return render(request, 'csvapp/confirm_delete.html', {'table': 'Prediction'})
+#def delete_prediction(request):
+#    if request.method == 'POST':
+#        Prediction.objects.all().delete()
+#        return redirect('index')
+#    return render(request, 'csvapp/confirm_delete.html', {'table': 'Prediction'})
 
 def delete_all(request):
     if request.method == 'POST':
-#        GroundTruth.objects.all().delete()
-#        GroundTruthClass.objects.all().delete()
-#        GroundTruthInput.objects.all().delete()
+        GroundTruth.objects.all().delete()
+        GroundTruthClass.objects.all().delete()
+        GroundTruthInput.objects.all().delete()
         Prediction.objects.all().delete()
-#        EmbeddingModels.objects.all().delete()
+        EmbeddingModels.objects.all().delete()
         ClassEmbeddings.objects.all().delete()
         InputEmbeddings.objects.all().delete()
         return redirect('index')
@@ -48,9 +48,9 @@ def upload_csv(request):
                     # Read the CSV file into a Pandas DataFrame
                     df = pd.read_csv(request.FILES['csv_file']).drop_duplicates().dropna()
                     df_class=df[['classification']].drop_duplicates()
-                    instances = [GroundTruthClass(classification=row['classification']) for index, row in df_class.iterrows()]
+                    instances = [GroundTruthClass(content=row['classification']) for index, row in df_class.iterrows()]
                     GroundTruthClass.objects.bulk_create(instances)
-                    instances = [GroundTruthInput(input=row['input']) for index, row in df.iterrows()]
+                    instances = [GroundTruthInput(content=row['input']) for index, row in df.iterrows()]
                     GroundTruthInput.objects.bulk_create(instances)      
                     # Example: Process the DataFrame (print first few rows)
                     instances = [GroundTruth(input_id=row['input'], classification_id=row['classification']) for index, row in df.iterrows()]                   
@@ -131,7 +131,7 @@ def create_embeddings(source_entity, destination_entity,source_column_name, sele
         field_values = {
             source_column_name: record,
             'model': selected_model,
-            'embedding_vector': embedding_vector,
+            'embedding': embedding_vector,
         }    
         embedded_record=create_dynamic_instance(destination_entity, field_values)
         print(embedded_record)
@@ -148,8 +148,8 @@ def embedding_task(request):
             selected_model = form.cleaned_data['model']
             model_name = selected_model.name
             embedding_model = SentenceTransformer(model_name)
-            embedding_results=create_embeddings(GroundTruthInput, InputEmbeddings,'input', selected_model, embedding_model )
-            embedding_results=create_embeddings(GroundTruthClass, ClassEmbeddings,'classification', selected_model, embedding_model )
+            embedding_results=create_embeddings(GroundTruthInput, InputEmbeddings,'content', selected_model, embedding_model )
+            embedding_results=create_embeddings(GroundTruthClass, ClassEmbeddings,'content', selected_model, embedding_model )
             return render(request, 'csvapp/embedding_results.html', {'results': embedding_results})
     else:
         form = ModelSelectionForm()

@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import upload_csv, ground_truth_list, prediction_list, prediction_update, index, delete_ground_truth, delete_prediction, delete_all,list_embedding_models, add_model, embedding_task
+from .views import upload_csv, ground_truth_list, prediction_list, prediction_update, index, delete_ground_truth, delete_all,list_embedding_models, add_model, embedding_task
 
 urlpatterns = [
     path('', index, name='index'),  # Default route
@@ -8,7 +8,7 @@ urlpatterns = [
     path('predictions/', prediction_list, name='prediction_list'),
     path('predictions/update/<int:pk>/', prediction_update, name='prediction_update'),
     path('delete_ground_truth/', delete_ground_truth, name='delete_ground_truth'),
-    path('delete_prediction/', delete_prediction, name='delete_prediction'),
+#    path('delete_prediction/', delete_prediction, name='delete_prediction'),
     path('delete_all/', delete_all, name='delete_all'),
     path('add_model/', add_model, name='add_model'),
     path('list_embedding_models/', list_embedding_models, name='list_embedding_models'),
