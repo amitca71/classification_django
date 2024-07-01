@@ -51,7 +51,7 @@ class Migration(migrations.Migration):
        migrations.RunSQL(
             """
             create or replace view v_input_embedding_with_category as (
-            SELECT ie.content_id, COALESCE(a.category, 'Other'), embedding, content_tsvector
+            SELECT ie.content_id, COALESCE(a.category, 'Other') as category, embedding, content_tsvector
             FROM input_embedding ie
             left JOIN v_category_hint a ON ie.content_tsvector @@ to_tsquery('yiddish', a.ts_words_string)
             ORDER BY ie.content_id)    
@@ -63,7 +63,7 @@ class Migration(migrations.Migration):
        migrations.RunSQL(
             """
             create or replace view v_class_embedding_with_category as (
-            SELECT ie.content_id, COALESCE(a.category, 'Other'), embedding, content_tsvector
+            SELECT ie.content_id, COALESCE(a.category, 'Other') as category, embedding, content_tsvector
             FROM class_embedding ie
             left JOIN v_category_hint a ON ie.content_tsvector @@ to_tsquery('yiddish', a.ts_words_string)
             ORDER BY ie.content_id)            
