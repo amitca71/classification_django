@@ -27,11 +27,11 @@ def delete_ground_truth(request):
 
 def delete_all(request):
     if request.method == 'POST':
-        GroundTruth.objects.all().delete()
-        GroundTruthClass.objects.all().delete()
-        GroundTruthInput.objects.all().delete()
-        Prediction.objects.all().delete()
-        EmbeddingModels.objects.all().delete()
+#        GroundTruth.objects.all().delete()
+#        GroundTruthClass.objects.all().delete()
+#        GroundTruthInput.objects.all().delete()
+#        Prediction.objects.all().delete()
+#        EmbeddingModels.objects.all().delete()
         ClassEmbeddings.objects.all().delete()
         InputEmbeddings.objects.all().delete()
         return redirect('index')
@@ -115,8 +115,8 @@ def create_dynamic_instance(model_name, field_values):
         model_class = apps.get_model(app_label='csvapp', model_name=model_name.__name__)
 
         # Create an instance of the model dynamically
-#        instance = model_class.objects.create(**field_values)
-        instance = model_class(**field_values)
+        instance = model_class.objects.create(**field_values)
+#        instance = model_class(**field_values)
         return instance  # Optionally return the created instance
 
     except AttributeError:
@@ -131,13 +131,13 @@ def create_embeddings(source_entity, destination_entity,source_column_name, sele
         field_values = {
             source_column_name: record,
             'model': selected_model,
-            'embedding': embedding_vector,
+            'embedding': embedding_vector
         }    
         embedded_record=create_dynamic_instance(destination_entity, field_values)
         print(embedded_record)
-#        embedded_record=destination_entity(classification=record,model=selected_model, embedding_vector=embedding_vector)
+#bulk not used because vector will not be created
         embedding_results.append(embedded_record)
-    destination_entity.objects.bulk_create(embedding_results)
+#    destination_entity.objects.bulk_create(embedding_results)
     return(embedding_results)
 
 ################################################
