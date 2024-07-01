@@ -35,6 +35,42 @@ class Migration(migrations.Migration):
             CREATE INDEX input_embedding_content_tsvector_idx ON input_embedding USING GIN(content_tsvector);
             """,
             reverse_sql=migrations.RunSQL.noop  # Reverse operation is a no-op
-        )
+        ),
+       
+       migrations.RunSQL(
+            """
+		create or replace view v_category_hint as
+		 (
+		    SELECT category, array_to_string(ARRAY_AGG(ts_word::VARCHAR), '|') AS ts_words_string
+		    FROM category_hint
+		    GROUP BY category
+		)
+            """,
+            reverse_sql=migrations.RunSQL.noop  # Reverse operation is a no-op
+       ),       
+       migrations.RunSQL(
+            """
+            create or replace view v_input_embedding_with_category as (
+            SELECT ie.content_id, COALESCE(a.category, 'Other'), embedding, content_tsvector
+            FROM input_embedding ie
+            left JOIN v_category_hint a ON ie.content_tsvector @@ to_tsquery('yiddish', a.ts_words_string)
+            ORDER BY ie.content_id)    
+
+            """,
+            reverse_sql=migrations.RunSQL.noop  # Reverse operation is a no-op
+
+       ),
+       migrations.RunSQL(
+            """
+            create or replace view v_class_embedding_with_category as (
+            SELECT ie.content_id, COALESCE(a.category, 'Other'), embedding, content_tsvector
+            FROM class_embedding ie
+            left JOIN v_category_hint a ON ie.content_tsvector @@ to_tsquery('yiddish', a.ts_words_string)
+            ORDER BY ie.content_id)            
+            """,
+            reverse_sql=migrations.RunSQL.noop  # Reverse operation is a no-op
+
+       ),
+       
 
     ]
