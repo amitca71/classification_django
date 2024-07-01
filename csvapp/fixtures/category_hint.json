@@ -10,6 +10,26 @@
     {"pk": 9, "model": "csvapp.CategoryHint", "fields": {"ts_word": "יסודה", "category":"Foundations"}},
     {"pk": 10, "model": "csvapp.CategoryHint", "fields": {"ts_word": "רפסודה", "category":"Foundations"}},
     {"pk": 11, "model": "csvapp.CategoryHint", "fields": {"ts_word": "כלו", "category":"Foundations"}},
-    {"pk": 12, "model": "csvapp.CategoryHint", "fields": {"ts_word": "כלונסאה", "category":"Foundations"}}
+    {"pk": 12, "model": "csvapp.CategoryHint", "fields": {"ts_word": "כלונסאה", "category":"Foundations"}},
+    {"pk": 13, "model": "csvapp.CategoryHint", "fields": {"ts_word": "וקורה", "category":"Beams"}},
+    {"pk": 14, "model": "csvapp.CategoryHint", "fields": {"ts_word": "מרצפי", "category":"Floors"}},
+    {"pk": 15, "model": "csvapp.CategoryHint", "fields": {"ts_word": "מרצפ", "category":"Floors"}},
+    {"pk": 16, "model": "csvapp.CategoryHint", "fields": {"ts_word": "לרצפה", "category":"Floors"}},
+    {"pk": 17, "model": "csvapp.CategoryHint", "fields": {"ts_word": "רמפת", "category":"Floors"}},
+    {"pk": 18, "model": "csvapp.CategoryHint", "fields": {"ts_word": "לרצפת", "category":"Floors"}},
+    {"pk": 19, "model": "csvapp.CategoryHint", "fields": {"ts_word": "ורפסודה", "category":"Floors"}},
+    {"pk": 20, "model": "csvapp.CategoryHint", "fields": {"ts_word": "במרצפ", "category":"Floors"}},
+    {"pk": 21, "model": "csvapp.CategoryHint", "fields": {"ts_word": "עמודי", "category":"Columns"}},
+    {"pk": 22, "model": "csvapp.CategoryHint", "fields": {"ts_word": "פלטה", "category":"Plates"}},
+    {"pk": 23, "model": "csvapp.CategoryHint", "fields": {"ts_word": "חלולה", "category":"Plates"}},
+    {"pk": 24, "model": "csvapp.CategoryHint", "fields": {"ts_word": "דרוכה", "category":"Plates"}},
+    {"pk": 25, "model": "csvapp.CategoryHint", "fields": {"ts_word": "ודרוכה", "category":"Plates"}},
+    {"pk": 26, "model": "csvapp.CategoryHint", "fields": {"ts_word": "לוחד", "category":"Plates"}},
+    {"pk": 27, "model": "csvapp.CategoryHint", "fields": {"ts_word": "מדרגה", "category":"Stairs"}},
+    {"pk": 28, "model": "csvapp.CategoryHint", "fields": {"ts_word": "למדרגה", "category":"Stairs"}},
+    {"pk": 29, "model": "csvapp.CategoryHint", "fields": {"ts_word": "המדרגה", "category":"Stairs"}},
+    {"pk": 30, "model": "csvapp.CategoryHint", "fields": {"ts_word": "לעמוד", "category":"Columns"}}
+    
+    
  ]
  
