@@ -2,6 +2,7 @@ from django.db import models, connection
 from pgvector.django import VectorField
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.contrib.postgres.fields import ArrayField
 class GroundTruthClass(models.Model):
     content = models.CharField(max_length=300, primary_key=True)
 #    embedding = models.JSONField()
@@ -70,16 +71,18 @@ def update_ts_input_vector(sender, instance, created, **kwargs):
         """
         with connection.cursor() as cursor:
             cursor.execute(sql, [instance.id])
-#class Prediction(models.Model):
-#    input = models.CharField(max_length=200)
-#    predicted = models.CharField(max_length=100)
+class Prediction(models.Model):
+    input = models.ForeignKey(GroundTruthInput, on_delete=models.CASCADE)
+    predictedion_array = ArrayField(models.CharField(max_length=200), blank=True)
+    categories_array=ArrayField(models.CharField(max_length=200), blank=True)
+    model = models.ForeignKey(EmbeddingModels, on_delete=models.CASCADE)
 #    fixed_prediction = models.CharField(max_length=100, blank=True)
 #    probability = models.FloatField()
-#    embedding = models.JSONField()
-#    class Meta:
-#        db_table = 'prediction' 
-#    def __str__(self):
-#        return self.input
+    class Meta:
+        db_table = 'prediction' 
+        unique_together = ('input', 'model')
+    def __str__(self):
+        return self.input
 class CategoryHint(models.Model):
     ts_word = models.CharField(max_length=30, primary_key=True)
     category = models.CharField(max_length=30)
@@ -92,6 +95,7 @@ class CategoryHint(models.Model):
 class VinputEmbeddingWithCategory(models.Model):
     category = models.CharField(max_length=30)
     content_id = models.CharField(max_length=300)
+    model_id=models.CharField(max_length=100)
     embedding = VectorField(dimensions=384)
     content_tsvector = models.TextField() 
 
@@ -102,6 +106,7 @@ class VinputEmbeddingWithCategory(models.Model):
 class VclassEmbeddingWithCategory(models.Model):
     category = models.CharField(max_length=30)
     content_id = models.CharField(max_length=300)
+    model_id=models.CharField(max_length=100)
     embedding = VectorField(dimensions=384)
     content_tsvector = models.TextField() 
 

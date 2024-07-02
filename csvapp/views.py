@@ -1,8 +1,13 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.apps import apps
+from pgvector.django import L2Distance
+from django.db.models import Count, CharField, Value, aggregates, fields
+from django.contrib.postgres.aggregates import ArrayAgg
+
+
 
 from django.core.paginator import Paginator
-from .models import GroundTruth, GroundTruthClass, GroundTruthInput, EmbeddingModels, ClassEmbeddings, InputEmbeddings
+from .models import GroundTruth, GroundTruthClass, GroundTruthInput, EmbeddingModels, ClassEmbeddings, InputEmbeddings, VinputEmbeddingWithCategory, VclassEmbeddingWithCategory, Prediction
 from .forms import CSVUploadForm, EmbeddingModelForm, ModelSelectionForm
 from sentence_transformers import SentenceTransformer, models
 
@@ -11,6 +16,9 @@ import csv
 from io import TextIOWrapper, StringIO
 import pandas as pd
 def index(request):
+#    results=VinputEmbeddingWithCategory.objects.filter(category='Other').values('category', 'content_id', 'content_tsvector', 'embedding')
+#    print (results[1])
+#    Item.objects.order_by(L2Distance('embedding', [3, 1, 2]))[:5]
     return render(request, 'csvapp/index.html')
 
 def delete_ground_truth(request):
@@ -78,16 +86,16 @@ def ground_truth_list(request):
     page_obj = paginator.get_page(page_number)
     return render(request, 'csvapp/ground_truth_list.html', {'page_obj': page_obj})
 
-def prediction_update(request, pk):
-    prediction = get_object_or_404(Prediction, pk=pk)
-    if request.method == 'POST':
-        form = PredictionForm(request.POST, instance=prediction)
-        if form.is_valid():
-            form.save()
-            return redirect('prediction_list')
-    else:
-        form = PredictionForm(instance=prediction)
-    return render(request, 'csvapp/prediction_form.html', {'form': form, 'prediction': prediction})
+#def prediction_update(request, pk):
+#    prediction = get_object_or_404(Prediction, pk=pk)
+#    if request.method == 'POST':
+#        form = PredictionForm(request.POST, instance=prediction)
+#        if form.is_valid():
+#            form.save()
+#            return redirect('prediction_list')
+#    else:
+#        form = PredictionForm(instance=prediction)
+#    return render(request, 'csvapp/prediction_form.html', {'form': form, 'prediction': prediction})
 
 def prediction_list(request):
     predictions = Prediction.objects.all()
@@ -109,14 +117,16 @@ def list_embedding_models(request):
     return render(request, 'csvapp/list_embedding_models.html', {'embedding_models': embedding_models})
 
 
-def create_dynamic_instance(model_name, field_values):
+def create_dynamic_instance(model_name, field_values, create_instance=True):
     try:
         # Retrieve the model dynamically
         model_class = apps.get_model(app_label='csvapp', model_name=model_name.__name__)
 
         # Create an instance of the model dynamically
-        instance = model_class.objects.create(**field_values)
-#        instance = model_class(**field_values)
+        if(create_instance):
+            instance = model_class.objects.create(**field_values)
+        else:
+            instance = model_class(**field_values)
         return instance  # Optionally return the created instance
 
     except AttributeError:
@@ -154,3 +164,41 @@ def embedding_task(request):
     else:
         form = ModelSelectionForm()
     return render(request, 'csvapp/select_model.html', {'form': form})
+
+
+################################################
+def predict(request):
+    if request.method == 'GET':
+        prediction_list=[]
+        queryset = VinputEmbeddingWithCategory.objects.values(
+            'id', 'content_id', 'model_id', 'embedding'
+        ).annotate(
+            categories=ArrayAgg('category', distinct=True)
+        )
+        # Execute the query and fetch results
+        results = list(queryset)
+
+        # Print or process the results
+        for result in results:
+            print(f"ID: {result['id']}, Content ID: {result['content_id']}, Model ID: {result['model_id']}, Categories: {result['categories']}")
+            queryset_cat = VclassEmbeddingWithCategory.objects.filter(
+            model_id=result['model_id'],
+            category__in=result['categories']
+            ).annotate(
+                embedding_diff=L2Distance('embedding', result['embedding'])
+            ).order_by('embedding_diff').values_list('content_id', flat=True)[:2]
+            results_cats = list(queryset_cat)
+            gt_input = GroundTruthInput.objects.filter(content=result['content_id']).first()
+
+            field_values = {
+                "input": gt_input,
+                "model_id": result['model_id'],
+                "categories_array": result['categories'],
+                "predictedion_array": results_cats,
+
+            }    
+            prediction_record=create_dynamic_instance(Prediction, field_values, create_instance=False)
+            prediction_list.append(prediction_record)
+        Prediction.objects.bulk_create(prediction_list)
+        return redirect('index')
+    return render(request, 'csvapp/prediction_list.html', {'table': 'All'})

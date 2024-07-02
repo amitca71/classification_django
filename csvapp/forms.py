@@ -24,3 +24,4 @@ class EmbeddingModelForm(forms.ModelForm):
 
 class ModelSelectionForm(forms.Form):
     model = forms.ModelChoiceField(queryset=EmbeddingModels.objects.all())
+
