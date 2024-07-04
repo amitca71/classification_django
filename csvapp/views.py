@@ -1,15 +1,15 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.apps import apps
-from pgvector.django import L2Distance
+from pgvector.django import L2Distance, CosineDistance
 from django.db.models import Count, CharField, Value, aggregates, fields
 from django.contrib.postgres.aggregates import ArrayAgg
-
+import itertools
 
 
 from django.core.paginator import Paginator
 from .models import GroundTruth, GroundTruthClass, GroundTruthInput, EmbeddingModels, ClassEmbeddings, InputEmbeddings, VinputEmbeddingWithCategory, VclassEmbeddingWithCategory, Prediction
 from .forms import CSVUploadForm, EmbeddingModelForm, ModelSelectionForm
-from sentence_transformers import SentenceTransformer, models
+from sentence_transformers import SentenceTransformer,CrossEncoder, models
 
 
 import csv
@@ -24,6 +24,8 @@ def index(request):
 def delete_ground_truth(request):
     if request.method == 'POST':
         GroundTruth.objects.all().delete()
+        GroundTruthInput.objects.all().delete()
+        GroundTruthClass.objects.all().delete()
         return redirect('index')
     return render(request, 'csvapp/confirm_delete.html', {'table': 'GroundTruth'})
 
@@ -35,13 +37,14 @@ def delete_ground_truth(request):
 
 def delete_all(request):
     if request.method == 'POST':
-#        GroundTruth.objects.all().delete()
-#        GroundTruthClass.objects.all().delete()
-#        GroundTruthInput.objects.all().delete()
-#        Prediction.objects.all().delete()
-#        EmbeddingModels.objects.all().delete()
+        GroundTruth.objects.all().delete()
+        GroundTruthClass.objects.all().delete()
+        GroundTruthInput.objects.all().delete()
+        EmbeddingModels.objects.all().delete()
         ClassEmbeddings.objects.all().delete()
         InputEmbeddings.objects.all().delete()
+        Prediction.objects.all().delete()
+
         return redirect('index')
     return render(request, 'csvapp/confirm_delete.html', {'table': 'All'})
 def upload_csv(request):
@@ -61,7 +64,7 @@ def upload_csv(request):
                     instances = [GroundTruthInput(content=row['input']) for index, row in df.iterrows()]
                     GroundTruthInput.objects.bulk_create(instances)      
                     # Example: Process the DataFrame (print first few rows)
-                    instances = [GroundTruth(input_id=row['input'], classification_id=row['classification']) for index, row in df.iterrows()]                   
+                    instances = [GroundTruth(input_id=row['input'], classification_id=row['classification'],translated_input=row['translated_input'], translated_classification=row['translated_classification']) for index, row in df.iterrows()]                   
                     GroundTruth.objects.bulk_create(instances)
 
                 except UnicodeDecodeError:
@@ -165,6 +168,13 @@ def embedding_task(request):
         form = ModelSelectionForm()
     return render(request, 'csvapp/select_model.html', {'form': form})
 
+def rerank(query, results):
+#    encoder = CrossEncoder('cross-encoder/stsb-distilroberta-base')
+    encoder = CrossEncoder('quangtqv/cross_encoder_tool_learning_best_model_11_6')
+    scores = encoder.predict([(query, item) for item in results])
+    print (scores)    
+    return [v for _, v in sorted(zip(scores, results), reverse=True)]
+
 
 ################################################
 def predict(request):
@@ -180,25 +190,30 @@ def predict(request):
 
         # Print or process the results
         for result in results:
-            print(f"ID: {result['id']}, Content ID: {result['content_id']}, Model ID: {result['model_id']}, Categories: {result['categories']}")
+#            print(f"ID: {result['id']}, Content ID: {result['content_id']}, Model ID: {result['model_id']}, Categories: {result['categories']}")
             queryset_cat = VclassEmbeddingWithCategory.objects.filter(
             model_id=result['model_id'],
             category__in=result['categories']
             ).annotate(
-                embedding_diff=L2Distance('embedding', result['embedding'])
-            ).order_by('embedding_diff').values_list('content_id', flat=True)[:2]
+                embedding_diff=CosineDistance('embedding', result['embedding'])
+            ).order_by('embedding_diff').values_list('content_id', flat=True)[:5]
             results_cats = list(queryset_cat)
+            first_result=results_cats[0]
             gt_input = GroundTruthInput.objects.filter(content=result['content_id']).first()
-
+            rerank_result=rerank(result['content_id'], results_cats[:2])
+            print(f'rerank_result: {rerank_result}')
+#            print(f"model_result':{first_result},cross_encd_rslt: {rerank_result}")
+            cross_encd_rslt=GroundTruthClass.objects.filter(content=rerank_result[0]).first()
             field_values = {
                 "input": gt_input,
                 "model_id": result['model_id'],
                 "categories_array": result['categories'],
                 "predictedion_array": results_cats,
+                "cross_encd_rslt_id": cross_encd_rslt,
 
             }    
-            prediction_record=create_dynamic_instance(Prediction, field_values, create_instance=False)
-            prediction_list.append(prediction_record)
-        Prediction.objects.bulk_create(prediction_list)
+            prediction_record=create_dynamic_instance(Prediction, field_values, create_instance=True)
+#        prediction_list=list(set(prediction_list))
+#        Prediction.objects.bulk_create(prediction_list)
         return redirect('index')
     return render(request, 'csvapp/prediction_list.html', {'table': 'All'})

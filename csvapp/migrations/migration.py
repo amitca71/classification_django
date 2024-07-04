@@ -51,7 +51,7 @@ class Migration(migrations.Migration):
        migrations.RunSQL(
             """
             create or replace view v_input_embedding_with_category as (
-            SELECT ie.content_id, COALESCE(a.category, 'Other') as category, embedding, content_tsvector
+            SELECT id, ie.content_id, COALESCE(a.category, 'Other') as category, model_id,embedding, content_tsvector
             FROM input_embedding ie
             left JOIN v_category_hint a ON ie.content_tsvector @@ to_tsquery('yiddish', a.ts_words_string)
             ORDER BY ie.content_id)    
@@ -63,7 +63,7 @@ class Migration(migrations.Migration):
        migrations.RunSQL(
             """
             create or replace view v_class_embedding_with_category as (
-            SELECT ie.content_id, COALESCE(a.category, 'Other') as category, embedding, content_tsvector
+            SELECT id, ie.content_id, COALESCE(a.category, 'Other') as category, model_id, embedding, content_tsvector
             FROM class_embedding ie
             left JOIN v_category_hint a ON ie.content_tsvector @@ to_tsquery('yiddish', a.ts_words_string)
             ORDER BY ie.content_id)            
@@ -71,6 +71,18 @@ class Migration(migrations.Migration):
             reverse_sql=migrations.RunSQL.noop  # Reverse operation is a no-op
 
        ),
+       migrations.RunSQL(
+            """
+            create or replace view v_prediction_vs_actual as (
+		with t_pred as (SELECT input_id, predictedion_array[1] as prediction, predictedion_array, model_id FROM public.prediction),
+		t_gt as (select input_id, classification_id from ground_truth)
+		select t_pred.input_id, prediction, classification_id  from t_pred inner join t_gt
+		on t_pred.input_id=t_gt.input_id and t_pred.prediction=t_gt.classification_id)
+            """,
+            reverse_sql=migrations.RunSQL.noop  # Reverse operation is a no-op
+
+       ),
+            
        
 
     ]

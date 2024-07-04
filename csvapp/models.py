@@ -21,6 +21,10 @@ class GroundTruthInput(models.Model):
 class GroundTruth(models.Model):
     input = models.ForeignKey(GroundTruthInput, on_delete=models.CASCADE)
     classification = models.ForeignKey(GroundTruthClass, on_delete=models.CASCADE)
+    translated_input = models.CharField(max_length=300, null=True) 
+    translated_classification = models.CharField(max_length=300, null=True) 
+
+
     class Meta:
         db_table = 'ground_truth' 
         unique_together = ('input', 'classification')
@@ -34,6 +38,7 @@ class EmbeddingModels(models.Model):
         return self.name
     class Meta:
         db_table = 'embedding_models' 
+
 
 class ClassEmbeddings(models.Model):
     content = models.ForeignKey(GroundTruthClass, on_delete=models.CASCADE)
@@ -76,6 +81,7 @@ class Prediction(models.Model):
     predictedion_array = ArrayField(models.CharField(max_length=200), blank=True)
     categories_array=ArrayField(models.CharField(max_length=200), blank=True)
     model = models.ForeignKey(EmbeddingModels, on_delete=models.CASCADE)
+    cross_encd_rslt=models.ForeignKey(GroundTruthClass, on_delete=models.CASCADE)
 #    fixed_prediction = models.CharField(max_length=100, blank=True)
 #    probability = models.FloatField()
     class Meta:
