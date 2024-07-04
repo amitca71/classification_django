@@ -79,7 +79,8 @@ def update_ts_input_vector(sender, instance, created, **kwargs):
 class Prediction(models.Model):
     input = models.ForeignKey(GroundTruthInput, on_delete=models.CASCADE)
     predictedion_array = ArrayField(models.CharField(max_length=200), blank=True)
-    categories_array=ArrayField(models.CharField(max_length=200), blank=True)
+    input_categories_array=ArrayField(models.CharField(max_length=200), blank=True)
+    class_categories_array=ArrayField(models.CharField(max_length=200), blank=True)
     model = models.ForeignKey(EmbeddingModels, on_delete=models.CASCADE)
     cross_encd_rslt=models.ForeignKey(GroundTruthClass, on_delete=models.CASCADE)
 #    fixed_prediction = models.CharField(max_length=100, blank=True)

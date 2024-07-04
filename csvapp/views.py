@@ -3,7 +3,8 @@ from django.apps import apps
 from pgvector.django import L2Distance, CosineDistance
 from django.db.models import Count, CharField, Value, aggregates, fields
 from django.contrib.postgres.aggregates import ArrayAgg
-import itertools
+from django.db.models import Q
+from django.db import connection
 
 
 from django.core.paginator import Paginator
@@ -37,12 +38,11 @@ def delete_ground_truth(request):
 
 def delete_all(request):
     if request.method == 'POST':
-        GroundTruth.objects.all().delete()
-        GroundTruthClass.objects.all().delete()
-        GroundTruthInput.objects.all().delete()
-        EmbeddingModels.objects.all().delete()
-        ClassEmbeddings.objects.all().delete()
-        InputEmbeddings.objects.all().delete()
+#        GroundTruth.objects.all().delete()
+#        GroundTruthClass.objects.all().delete()
+#        GroundTruthInput.objects.all().delete()
+#        ClassEmbeddings.objects.all().delete()
+#        InputEmbeddings.objects.all().delete()
         Prediction.objects.all().delete()
 
         return redirect('index')
@@ -134,6 +134,8 @@ def create_dynamic_instance(model_name, field_values, create_instance=True):
 
     except AttributeError:
         print(f"Model '{model_name}' does not exist.")
+ #   except Exception:
+ #       print(Exception)
 
 ########################################################
 def create_embeddings(source_entity, destination_entity,source_column_name, selected_model,embedding_model):
@@ -175,44 +177,105 @@ def rerank(query, results):
     print (scores)    
     return [v for _, v in sorted(zip(scores, results), reverse=True)]
 
-
+def execute_query(query, params={}):
+    with connection.cursor() as cursor:
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+    return rows
 ################################################
 def predict(request):
     if request.method == 'GET':
-        prediction_list=[]
-        queryset = VinputEmbeddingWithCategory.objects.values(
-            'id', 'content_id', 'model_id', 'embedding'
-        ).annotate(
-            categories=ArrayAgg('category', distinct=True)
-        )
-        # Execute the query and fetch results
-        results = list(queryset)
+        input_query = """
+            SELECT id, content_id, model_id, ARRAY_AGG(category) AS categories
+            FROM v_input_embedding_with_category
+            GROUP BY id, content_id, model_id
+        """
 
-        # Print or process the results
-        for result in results:
-#            print(f"ID: {result['id']}, Content ID: {result['content_id']}, Model ID: {result['model_id']}, Categories: {result['categories']}")
-            queryset_cat = VclassEmbeddingWithCategory.objects.filter(
-            model_id=result['model_id'],
-            category__in=result['categories']
-            ).annotate(
-                embedding_diff=CosineDistance('embedding', result['embedding'])
-            ).order_by('embedding_diff').values_list('content_id', flat=True)[:5]
-            results_cats = list(queryset_cat)
-            first_result=results_cats[0]
-            gt_input = GroundTruthInput.objects.filter(content=result['content_id']).first()
-            rerank_result=rerank(result['content_id'], results_cats[:2])
-            print(f'rerank_result: {rerank_result}')
-#            print(f"model_result':{first_result},cross_encd_rslt: {rerank_result}")
+        class_query = """
+            SELECT content_id, category
+            FROM v_class_embedding_with_category
+            WHERE model_id = %(model_id)s
+            AND category = ANY(%(categories)s)
+            ORDER BY embedding <=> (
+                SELECT embedding
+                FROM input_embedding
+                WHERE id = %(id)s
+                AND model_id = %(model_id)s
+            )
+            LIMIT 5
+        """
+        inputs_list = execute_query(input_query)
+        for input_row in inputs_list:
+            input_id = input_row[0]
+            input_content = input_row[1]
+            model_id = input_row[2]
+            input_categories = input_row[3]
+            classes = execute_query(class_query, {'model_id': model_id, 'categories': input_categories, 'id': input_id})
+#            print(f"Input: {input_id}, Content ID: {input_content}, Model ID: {model_id}, Categories: {input_categories}")
+            print(input_categories)
+            print(classes)
+            gt_input = GroundTruthInput.objects.filter(content=input_content).first()
+            results_cats = [item[0] for item in classes]
+            rerank_result=rerank(input_content, results_cats[:2])
+            class_category_list=[item[1] for item in classes]
             cross_encd_rslt=GroundTruthClass.objects.filter(content=rerank_result[0]).first()
             field_values = {
                 "input": gt_input,
-                "model_id": result['model_id'],
-                "categories_array": result['categories'],
+                "model_id": model_id,
+                "input_categories_array": input_categories,
+                "class_categories_array": class_category_list,
                 "predictedion_array": results_cats,
                 "cross_encd_rslt_id": cross_encd_rslt,
-
             }    
             prediction_record=create_dynamic_instance(Prediction, field_values, create_instance=True)
+#        prediction_list=[]
+#        queryset = VinputEmbeddingWithCategory.objects.values(
+#            'id', 'content_id', 'model_id', 'embedding'
+#        ).annotate(
+#            categories=ArrayAgg('category', distinct=True)
+#        )
+        # Execute the query and fetch results
+#        results = list(queryset)
+#        print(results)
+        # Print or process the results
+#        for result in results:
+#            print(f"ID: {result['id']}, Content ID: {result['content_id']}, Model ID: {result['model_id']}, Categories: {result['categories']}")
+#            class_categories=(result['categories'])
+#            class_categories=result['categories']
+
+##################################################################
+#            queryset_cat = VclassEmbeddingWithCategory.objects.filter(
+#                Q(category__in=class_categories)  # AND condition for category using ANY
+#            )
+#            queryset_cat = queryset_cat.annotate(
+#                embedding_diff=CosineDistance('embedding', result['embedding'])
+#            ).order_by('embedding_diff').values_list('content_id', flat=True)[:3]
+#
+##############################################################
+#            queryset_cat = VclassEmbeddingWithCategory.objects.filter(
+#            model_id=result['model_id'] & 
+#            category__in=['Floors']
+#            ).annotate(
+#                embedding_diff=CosineDistance('embedding', result['embedding'])
+#            ).order_by('embedding_diff').values_list('content_id', flat=True)[:5]
+#            category_set_result=results = queryset_cat.values_list('category')
+#            for category in category_set_result:
+#                print(category[0]) 
+#            results_cats = list(queryset_cat)
+#            gt_input = GroundTruthInput.objects.filter(content=result['content_id']).first()
+#            rerank_result=rerank(result['content_id'], results_cats[:2])
+#            print(f'rerank_result: {rerank_result}')
+#            print(f"model_result':{first_result},cross_encd_rslt: {rerank_result}")
+#            cross_encd_rslt=GroundTruthClass.objects.filter(content=rerank_result[0]).first()
+#            field_values = {
+#                "input": gt_input,
+#                "model_id": result['model_id'],
+#                "input_categories_array": result['categories'],
+#                "predictedion_array": results_cats,
+#                "cross_encd_rslt_id": cross_encd_rslt,
+#
+#            }    
+#            prediction_record=create_dynamic_instance(Prediction, field_values, create_instance=True)
 #        prediction_list=list(set(prediction_list))
 #        Prediction.objects.bulk_create(prediction_list)
         return redirect('index')
