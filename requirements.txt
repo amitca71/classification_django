@@ -4,4 +4,4 @@ pgvector
 psycopg
 pandas
 sentence_transformers
-
+langdetect

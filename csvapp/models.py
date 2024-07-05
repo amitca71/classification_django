@@ -5,14 +5,14 @@ from django.dispatch import receiver
 from django.contrib.postgres.fields import ArrayField
 class GroundTruthClass(models.Model):
     content = models.CharField(max_length=300, primary_key=True)
-#    embedding = models.JSONField()
+    language=models.CharField(max_length=10)
     class Meta:
         db_table = 'ground_truth_classes' 
     def __str__(self):
         return self.content
 class GroundTruthInput(models.Model):
     content = models.CharField(max_length=300, primary_key=True) 
-#    c = models.JSONField()
+    language=models.CharField(max_length=10)
     class Meta:
         db_table = 'ground_truth_input' 
     def __str__(self):
@@ -44,6 +44,7 @@ class ClassEmbeddings(models.Model):
     content = models.ForeignKey(GroundTruthClass, on_delete=models.CASCADE)
     model = models.ForeignKey(EmbeddingModels, on_delete=models.CASCADE)
     embedding = VectorField(dimensions=384)
+    language=models.CharField(max_length=10)
     class Meta:
         db_table = 'class_embedding'     
         unique_together = ('content', 'model')
@@ -62,6 +63,7 @@ class InputEmbeddings(models.Model):
     content = models.ForeignKey(GroundTruthInput, on_delete=models.CASCADE)
     model = models.ForeignKey(EmbeddingModels, on_delete=models.CASCADE)
     embedding = VectorField(dimensions=384)
+    language=models.CharField(max_length=10)
     class Meta:
         db_table = 'input_embedding'     
         unique_together = ('content', 'model')
@@ -105,6 +107,7 @@ class VinputEmbeddingWithCategory(models.Model):
     model_id=models.CharField(max_length=100)
     embedding = VectorField(dimensions=384)
     content_tsvector = models.TextField() 
+    language=models.CharField(max_length=10)
 
     class Meta:
         managed = False  # This ensures Django does not manage this model's table
@@ -116,7 +119,7 @@ class VclassEmbeddingWithCategory(models.Model):
     model_id=models.CharField(max_length=100)
     embedding = VectorField(dimensions=384)
     content_tsvector = models.TextField() 
-
+    language=models.CharField(max_length=10)
     class Meta:
         managed = False  # This ensures Django does not manage this model's table
         db_table = 'v_class_embedding_with_category' 

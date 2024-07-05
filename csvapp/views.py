@@ -5,14 +5,11 @@ from django.db.models import Count, CharField, Value, aggregates, fields
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import Q
 from django.db import connection
-
-
 from django.core.paginator import Paginator
 from .models import GroundTruth, GroundTruthClass, GroundTruthInput, EmbeddingModels, ClassEmbeddings, InputEmbeddings, VinputEmbeddingWithCategory, VclassEmbeddingWithCategory, Prediction
 from .forms import CSVUploadForm, EmbeddingModelForm, ModelSelectionForm
 from sentence_transformers import SentenceTransformer,CrossEncoder, models
-
-
+from langdetect import detect
 import csv
 from io import TextIOWrapper, StringIO
 import pandas as pd
@@ -38,15 +35,39 @@ def delete_ground_truth(request):
 
 def delete_all(request):
     if request.method == 'POST':
-#        GroundTruth.objects.all().delete()
-#        GroundTruthClass.objects.all().delete()
-#        GroundTruthInput.objects.all().delete()
-#        ClassEmbeddings.objects.all().delete()
-#        InputEmbeddings.objects.all().delete()
+#        delete_ground_truth(request)
+        ClassEmbeddings.objects.all().delete()
+        InputEmbeddings.objects.all().delete()
         Prediction.objects.all().delete()
 
         return redirect('index')
     return render(request, 'csvapp/confirm_delete.html', {'table': 'All'})
+
+def create_dynamic_instance(model_name, field_values, create_instance=True):
+    try:
+        # Retrieve the model dynamically
+        model_class = apps.get_model(app_label='csvapp', model_name=model_name.__name__)
+
+        # Create an instance of the model dynamically
+        if(create_instance):
+            instance = model_class.objects.create(**field_values)
+        else:
+            instance = model_class(**field_values)
+        return instance  # Optionally return the created instance
+
+    except AttributeError:
+        print(f"Model '{model_name}' does not exist.")
+
+def translate_and_add_to_gt(df, text_column, destination_table ):
+    df=df.rename(columns={text_column:'content'})
+    df['language']=df['content'].apply(lambda x: detect(x)) 
+    df['language']=df['language'].apply(lambda x: 'hebrew' if x=='he' else 'english')
+    df=df[['content', 'language']].drop_duplicates()
+    print(df)
+    data_to_insert = df.to_dict(orient='records')
+    objs = [destination_table(**data) for data in data_to_insert]
+    destination_table.objects.bulk_create(objs)
+
 def upload_csv(request):
     if request.method == 'POST':
         form = CSVUploadForm(request.POST, request.FILES)
@@ -58,11 +79,10 @@ def upload_csv(request):
                 try:
                     # Read the CSV file into a Pandas DataFrame
                     df = pd.read_csv(request.FILES['csv_file']).drop_duplicates().dropna()
-                    df_class=df[['classification']].drop_duplicates()
-                    instances = [GroundTruthClass(content=row['classification']) for index, row in df_class.iterrows()]
-                    GroundTruthClass.objects.bulk_create(instances)
-                    instances = [GroundTruthInput(content=row['input']) for index, row in df.iterrows()]
-                    GroundTruthInput.objects.bulk_create(instances)      
+                    translate_and_add_to_gt(df,'classification' , GroundTruthClass )
+                    translate_and_add_to_gt(df,'translated_classification' , GroundTruthClass )
+                    translate_and_add_to_gt(df,'input' , GroundTruthInput )
+                    translate_and_add_to_gt(df,'translated_input' , GroundTruthInput )   
                     # Example: Process the DataFrame (print first few rows)
                     instances = [GroundTruth(input_id=row['input'], classification_id=row['classification'],translated_input=row['translated_input'], translated_classification=row['translated_classification']) for index, row in df.iterrows()]                   
                     GroundTruth.objects.bulk_create(instances)
@@ -120,20 +140,6 @@ def list_embedding_models(request):
     return render(request, 'csvapp/list_embedding_models.html', {'embedding_models': embedding_models})
 
 
-def create_dynamic_instance(model_name, field_values, create_instance=True):
-    try:
-        # Retrieve the model dynamically
-        model_class = apps.get_model(app_label='csvapp', model_name=model_name.__name__)
-
-        # Create an instance of the model dynamically
-        if(create_instance):
-            instance = model_class.objects.create(**field_values)
-        else:
-            instance = model_class(**field_values)
-        return instance  # Optionally return the created instance
-
-    except AttributeError:
-        print(f"Model '{model_name}' does not exist.")
  #   except Exception:
  #       print(Exception)
 
@@ -146,7 +152,8 @@ def create_embeddings(source_entity, destination_entity,source_column_name, sele
         field_values = {
             source_column_name: record,
             'model': selected_model,
-            'embedding': embedding_vector
+            'embedding': embedding_vector,
+            'language': getattr(record, 'language')
         }    
         embedded_record=create_dynamic_instance(destination_entity, field_values)
         print(embedded_record)
@@ -185,9 +192,10 @@ def execute_query(query, params={}):
 ################################################
 def predict(request):
     if request.method == 'GET':
+        language='hebrew'
         input_query = """
             SELECT id, content_id, model_id, ARRAY_AGG(category) AS categories
-            FROM v_input_embedding_with_category
+            FROM v_input_embedding_with_category where language= %(language)s
             GROUP BY id, content_id, model_id
         """
 
@@ -195,7 +203,8 @@ def predict(request):
             SELECT content_id, category
             FROM v_class_embedding_with_category
             WHERE model_id = %(model_id)s
-            AND category = ANY(%(categories)s)
+            AND category = ANY(%(categories)s) 
+            AND language= %(language)s
             ORDER BY embedding <=> (
                 SELECT embedding
                 FROM input_embedding
@@ -204,13 +213,13 @@ def predict(request):
             )
             LIMIT 5
         """
-        inputs_list = execute_query(input_query)
+        inputs_list = execute_query(input_query, {'language': language})
         for input_row in inputs_list:
             input_id = input_row[0]
             input_content = input_row[1]
             model_id = input_row[2]
-            input_categories = input_row[3]
-            classes = execute_query(class_query, {'model_id': model_id, 'categories': input_categories, 'id': input_id})
+            input_categories = input_row[3] + ['Other']
+            classes = execute_query(class_query, {'model_id': model_id, 'categories': input_categories , 'id': input_id, 'language': language} )
 #            print(f"Input: {input_id}, Content ID: {input_content}, Model ID: {model_id}, Categories: {input_categories}")
             print(input_categories)
             print(classes)
