@@ -1,20 +1,20 @@
 # classification_django
 python -m venv .
-chmod 755 ./bin/activate
-. ./bin/activate
-pip install -r requirements.txt
+chmod 755 ./bin/activate  
+. ./bin/activate  
+pip install -r requirements.txt  
 
-django-admin startapp csvapp
-python manage.py makemigrations
-ln csvapp/migration.py csvapp/migrations/migration.py
+django-admin startapp csvapp  
+python manage.py makemigrations  
+ln csvapp/migration.py csvapp/migrations/migration.py  
 
-python manage.py migrate
-python manage.py loaddata embedding_models
-python manage.py loaddata category_hint 
-python manage.py runserver
+python manage.py migrate  
+python manage.py loaddata embedding_models  
+python manage.py loaddata category_hint   
+python manage.py runserver  
 
-python manage.py showmigrations
-python manage.py makemigrations --merge
+python manage.py showmigrations  
+python manage.py makemigrations --merge  
 
 redo migration pre requisite:
 delete from django_migrations;
